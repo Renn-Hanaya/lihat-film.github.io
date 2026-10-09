@@ -1,0 +1,199 @@
+/* ==========================================================================
+   CINEVERSE — Calm, Modern & Minimalist Cinema UI
+   Aesthetic: Architectural, Understated, Matte Dark, Zero Gradients
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg-main: #0c0d12;
+  --bg-surface: #15161d;
+  --bg-surface-hover: #1c1e27;
+  --border-subtle: #242631;
+  --border-strong: #383b49;
+  --text-primary: #f4f4f6;
+  --text-muted: #8b8f9e;
+  --text-dim: #5c6070;
+  --accent-gold: #fbbf24;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide Scrollbar for rails while maintaining smooth scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom Scrollbar for Modal and Page */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0c0d12;
+}
+::-webkit-scrollbar-thumb {
+  background: #242631;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #383b49;
+}
+
+/* Clean Surfaces without Gradients or Neon */
+.surface-nav {
+  background: rgba(12, 13, 18, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.surface-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.25s ease, 
+              background-color 0.25s ease;
+}
+
+.surface-card:hover {
+  background-color: var(--bg-surface-hover);
+  border-color: var(--border-strong);
+  transform: translateY(-4px);
+}
+
+.surface-modal {
+  background-color: #12131a;
+  border: 1px solid var(--border-subtle);
+}
+
+/* Movie Poster Aspect Ratio Container */
+.poster-container {
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  position: relative;
+  background-color: #171821;
+}
+
+/* Hero Natural Scrim Overlay (Neutral Black for Readability, No Colored Gradients) */
+.hero-scrim-vertical {
+  background: linear-gradient(
+    180deg,
+    rgba(12, 13, 18, 0.15) 0%,
+    rgba(12, 13, 18, 0.55) 50%,
+    rgba(12, 13, 18, 0.95) 85%,
+    #0c0d12 100%
+  );
+}
+
+.hero-scrim-horizontal {
+  background: linear-gradient(
+    90deg,
+    #0c0d12 0%,
+    rgba(12, 13, 18, 0.92) 35%,
+    rgba(12, 13, 18, 0.45) 70%,
+    transparent 100%
+  );
+}
+
+/* Neutral Minimalist Shimmer */
+.skeleton-shimmer {
+  background-color: #161820;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Carousel Control Buttons (Subtle & Quiet) */
+.carousel-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.carousel-rail:hover .carousel-btn {
+  opacity: 1;
+}
+
+/* Modal Animation */
+.modal-enter {
+  animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Modern Solid Action Buttons (Apple TV+ / Modern Streaming Style, Strictly No Gradients) */
+.btn-solid-white {
+  background-color: #ffffff;
+  color: #0c0d12;
+  font-weight: 600;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.btn-solid-white:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-solid-dark {
+  background-color: #1f212b;
+  color: #f4f4f6;
+  border: 1px solid var(--border-subtle);
+  font-weight: 500;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-solid-dark:hover {
+  background-color: #272a38;
+  border-color: var(--border-strong);
+}
+
+/* Clean Solid Badges */
+.badge-clean-dark {
+  background-color: rgba(12, 13, 18, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
