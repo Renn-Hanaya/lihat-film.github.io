@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cineverse — Katalog Film & Rekomendasi Sinema</title>
+  <meta name="description" content="Platform penemuan film modern dan tenang dengan katalog lengkap, trailer resmi, ulasan, dan rekomendasi berbasis TMDB.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cinema: {
+              950: '#0c0d12',
+              900: '#14151c',
+              850: '#181a24',
+              800: '#1f2230',
+              700: '#2c3042',
+              600: '#3d435c',
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Config and API scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+</head>
+<body x-data="movieApp()" class="bg-cinema-950 text-slate-100 min-h-screen selection:bg-zinc-700 selection:text-white">
+
+  <!-- ========================================================================
+       TOP NAVIGATION BAR (Clean, Calm & Minimalist)
+       ======================================================================== -->
+  <header class="fixed top-0 left-0 right-0 z-40 surface-nav transition-all duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20">
+        
+        <!-- Logo & Navigation Links -->
+        <div class="flex items-center gap-8">
+          <!-- Logo -->
+          <a href="#" @click.prevent="activeTab = 'home'; isSearchActive = false; window.scrollTo({top: 0, behavior: 'smooth'})" class="flex items-center gap-2.5 group">
+            <div class="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700/80 flex items-center justify-center text-white">
+              <svg class="w-4 h-4 text-zinc-200" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v2h2V6H4zm4 0v2h2V6H8zm4 0v2h2V6h-2zm4 0v2h2V6h-2zm4 0v2h2V6h-2zM4 16v2h2v-2H4zm4 0v2h2v-2H8zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2zM4 10h16v4H4v-4z"/>
+              </svg>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-lg font-bold tracking-tight text-white">CINEVERSE</span>
+            </div>
+          </a>
+
+          <!-- Desktop Navigation Items -->
+          <nav class="hidden md:flex items-center gap-1.5">
+            <button 
+              @click="activeTab = 'home'; isSearchActive = false" 
+              :class="activeTab === 'home' && !isSearchActive ? 'text-white bg-zinc-800/90 font-medium' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'"
+              class="px-3.5 py-1.5 rounded-md text-sm transition-colors duration-150">
+              Beranda
+            </button>
+            <button 
+              @click="activeTab = 'home'; isSearchActive = false; document.getElementById('rail-trending').scrollIntoView({behavior: 'smooth'})" 
+              class="px-3.5 py-1.5 rounded-md text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 transition-colors duration-150">
+              Trending
+            </button>
+            <button 
+              @click="switchToGenres()" 
+              :class="activeTab === 'genres' ? 'text-white bg-zinc-800/90 font-medium' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'"
+              class="px-3.5 py-1.5 rounded-md text-sm transition-colors duration-150">
+              Kategori
+            </button>
+            <button 
+              @click="activeTab = 'home'; isSearchActive = false; document.getElementById('rail-toprated').scrollIntoView({behavior: 'smooth'})" 
+              class="px-3.5 py-1.5 rounded-md text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 transition-colors duration-150">
+              Rating Tertinggi
+            </button>
+            <!-- Tahun Rilis Dropdown Menu -->
+            <div class="relative" @click.outside="yearDropdownOpen = false">
+              <button 
+                @click="yearDropdownOpen = !yearDropdownOpen" 
+                :class="activeTab === 'years' ? 'text-white bg-zinc-800/90 font-medium' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'"
+                class="px-3.5 py-1.5 rounded-md text-sm transition-colors duration-150 flex items-center gap-1.5">
+                <span>Tahun Rilis</span>
+                <span class="text-xs text-zinc-400 font-normal" x-show="activeTab === 'years'" x-text="`(${selectedYear})`"></span>
+                <svg class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200" :class="yearDropdownOpen ? 'rotate-180 text-white' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+
+              <!-- Dropdown Panel -->
+              <div 
+                x-show="yearDropdownOpen" 
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 translate-y-1"
+                class="absolute top-full left-0 mt-2 w-72 bg-[#14151c] border border-zinc-800 rounded-xl shadow-2xl p-3 z-50">
+                <div class="flex items-center justify-between mb-2 px-1">
+                  <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Pilih Tahun</span>
+                  <span class="text-[11px] text-zinc-500">1970 - 2026</span>
+                </div>
+                
+                <!-- Quick year grid -->
+                <div class="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto pr-1 mb-2">
+                  <template x-for="yr in availableYears" :key="yr">
+                    <button 
+                      @click="selectYear(yr)" 
+                      :class="selectedYear === yr && activeTab === 'years' ? 'bg-white text-zinc-950 font-semibold' : 'bg-zinc-900/80 text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-800/80'"
+                      class="py-1 text-xs rounded text-center transition-colors" 
+                      x-text="yr">
+                    </button>
+                  </template>
+                </div>
+
+                <div class="pt-2 border-t border-zinc-800 flex justify-between items-center px-1">
+                  <button 
+                    @click="switchToYears()" 
+                    class="text-xs text-zinc-300 hover:text-white font-medium flex items-center gap-1 transition-colors">
+                    <span>Buka Katalog Lengkap</span>
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button 
+              @click="activeTab = 'watchlist'; isSearchActive = false" 
+              :class="activeTab === 'watchlist' ? 'text-white bg-zinc-800/90 font-medium' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'"
+              class="px-3.5 py-1.5 rounded-md text-sm transition-colors duration-150 flex items-center gap-2">
+              <span>Daftar Saya</span>
+              <span 
+                x-show="watchlist.length > 0" 
+                x-text="watchlist.length" 
+                class="px-1.5 py-0.2 text-[11px] font-semibold rounded bg-zinc-700 text-zinc-200"></span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Search Bar & Profile -->
+        <div class="flex items-center gap-3">
+          
+          <!-- Live Search Input -->
+          <div class="relative w-40 sm:w-60 md:w-72">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+            </div>
+            <input 
+              type="text" 
+              x-model="searchQuery" 
+              @input="onSearchInput()"
+              placeholder="Cari film atau genre..." 
+              class="w-full pl-9 pr-8 py-1.5 rounded-lg text-xs sm:text-sm bg-cinema-900 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors"
+            />
+            <!-- Clear Search Button -->
+            <button 
+              x-show="searchQuery.length > 0" 
+              @click="clearSearch()" 
+              class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-500 hover:text-zinc-300">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Watchlist Quick Icon (Mobile) -->
+          <button 
+            @click="activeTab = 'watchlist'; isSearchActive = false" 
+            class="md:hidden relative p-2 rounded-lg bg-cinema-900 border border-zinc-800 text-zinc-300 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+            </svg>
+            <span 
+              x-show="watchlist.length > 0" 
+              x-text="watchlist.length" 
+              class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-zinc-700 text-[10px] font-bold flex items-center justify-center text-white"></span>
+          </button>
+
+          <!-- User Profile Avatar -->
+          <div class="hidden sm:flex items-center pl-2 border-l border-zinc-800">
+            <div class="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden cursor-pointer">
+              <img 
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" 
+                alt="Avatar" 
+                class="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          <!-- Mobile Hamburger Toggle -->
+          <button 
+            @click="mobileMenuOpen = !mobileMenuOpen" 
+            class="md:hidden p-2 rounded-lg bg-cinema-900 border border-zinc-800 text-zinc-300 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown Menu -->
+    <div 
+      x-show="mobileMenuOpen" 
+      x-transition 
+      @click.outside="mobileMenuOpen = false" 
+      class="md:hidden bg-cinema-900 border-t border-zinc-800 px-4 py-3 space-y-1.5">
+      <button 
+        @click="activeTab = 'home'; isSearchActive = false; mobileMenuOpen = false" 
+        class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-zinc-800"
+        :class="activeTab === 'home' ? 'text-white font-semibold' : 'text-zinc-400'">
+        Beranda
+      </button>
+      <button 
+        @click="switchToGenres(); mobileMenuOpen = false" 
+        class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-zinc-800"
+        :class="activeTab === 'genres' ? 'text-white font-semibold' : 'text-zinc-400'">
+        Kategori Film
+      </button>
+      <button 
+        @click="switchToYears(); mobileMenuOpen = false" 
+        class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-zinc-800"
+        :class="activeTab === 'years' ? 'text-white font-semibold' : 'text-zinc-400'">
+        Tahun Rilis
+      </button>
+      <button 
+        @click="activeTab = 'watchlist'; isSearchActive = false; mobileMenuOpen = false" 
+        class="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-zinc-800 flex items-center justify-between"
+        :class="activeTab === 'watchlist' ? 'text-white font-semibold' : 'text-zinc-400'">
+        <span>Daftar Saya</span>
+        <span x-show="watchlist.length > 0" x-text="watchlist.length" class="px-2 py-0.5 text-xs rounded bg-zinc-700 text-zinc-200"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       MAIN CONTENT CONTAINER
+       ======================================================================== -->
+  <main class="relative z-10 pt-16 sm:pt-20">
+
+    <!-- ====================================================================
+         VIEW A: SEARCH RESULTS OVERLAY
+         ==================================================================== -->
+    <div x-show="isSearchActive" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-[70vh]">
+      <div class="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800">
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold flex items-center gap-2 text-white">
+            <span>Hasil Pencarian:</span>
+            <span class="text-zinc-400" x-text="`&ldquo;${searchQuery}&rdquo;`"></span>
+          </h1>
+          <p class="text-xs sm:text-sm text-zinc-500 mt-1" x-text="`${searchResults.length} judul film ditemukan`"></p>
+        </div>
+        <button 
+          @click="clearSearch()" 
+          class="px-3.5 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs sm:text-sm font-medium text-zinc-300 transition-colors">
+          Tutup Pencarian
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div x-show="isSearching" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <template x-for="i in 12" :key="i">
+          <div class="poster-container skeleton-shimmer"></div>
+        </template>
+      </div>
+
+      <!-- Empty State -->
+      <div x-show="!isSearching && searchResults.length === 0" class="text-center py-24">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-zinc-300">Tidak ada film yang cocok</h3>
+        <p class="text-zinc-500 text-sm mt-1">Coba kata kunci lain atau periksa ejaan judul.</p>
+      </div>
+
+      <!-- Results Grid -->
+      <div x-show="!isSearching && searchResults.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <template x-for="movie in searchResults" :key="movie.id">
+          <div 
+            @click="openModal(movie)" 
+            class="group cursor-pointer rounded-lg surface-card overflow-hidden flex flex-col justify-between">
+            <div class="poster-container relative">
+              <img 
+                :src="getImageUrl(movie.poster_path, 'w500')" 
+                :alt="movie.title" 
+                loading="lazy"
+                class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+              />
+              <!-- Rating Pill -->
+              <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                <span class="text-amber-400">★</span>
+                <span x-text="formatRating(movie.vote_average)"></span>
+              </div>
+            </div>
+            <div class="p-3">
+              <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+              <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                <span x-text="formatYear(movie.release_date)"></span>
+                <button 
+                  @click.stop="toggleWatchlist(movie, $event)" 
+                  class="hover:text-zinc-200 transition-colors">
+                  <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓ Di Daftar</span>
+                  <span x-show="!isInWatchlist(movie.id)">+ Daftar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW B: WATCHLIST / DAFTAR SAYA
+         ==================================================================== -->
+    <div x-show="!isSearchActive && activeTab === 'watchlist'" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-[70vh]">
+      <div class="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold text-white">Daftar Tontonan Saya</h1>
+          <p class="text-xs sm:text-sm text-zinc-500 mt-1" x-text="`${watchlist.length} film tersimpan untuk ditonton nanti`"></p>
+        </div>
+        <button 
+          x-show="watchlist.length > 0"
+          @click="watchlist = []; saveWatchlist(); showNotification('Semua film dalam daftar telah dihapus', 'info')" 
+          class="px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-red-400 text-xs font-medium transition-colors">
+          Hapus Semua
+        </button>
+      </div>
+
+      <!-- Empty State -->
+      <div x-show="watchlist.length === 0" class="text-center py-24 bg-cinema-900/60 border border-zinc-800 rounded-xl max-w-xl mx-auto px-6">
+        <div class="w-14 h-14 mx-auto mb-4 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-400">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+          </svg>
+        </div>
+        <h2 class="text-lg font-semibold text-white mb-1">Daftar Tontonan Masih Kosong</h2>
+        <p class="text-zinc-500 text-sm max-w-sm mx-auto mb-6">
+          Simpan film yang ingin Anda tonton dengan menekan tombol <strong>+ Tambah ke Daftar</strong>.
+        </p>
+        <button 
+          @click="activeTab = 'home'" 
+          class="btn-solid-white px-5 py-2 rounded-lg text-sm">
+          Jelajahi Film
+        </button>
+      </div>
+
+      <!-- Watchlist Grid -->
+      <div x-show="watchlist.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <template x-for="movie in watchlist" :key="movie.id">
+          <div 
+            @click="openModal(movie)" 
+            class="group cursor-pointer rounded-lg surface-card overflow-hidden flex flex-col justify-between relative">
+            <div class="poster-container relative">
+              <img 
+                :src="getImageUrl(movie.poster_path, 'w500')" 
+                :alt="movie.title" 
+                loading="lazy"
+                class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+              />
+              <!-- Quick remove button -->
+              <button 
+                @click.stop="toggleWatchlist(movie, $event)" 
+                title="Hapus dari daftar"
+                class="absolute top-2 right-2 w-7 h-7 rounded-md bg-black/80 hover:bg-zinc-800 text-zinc-300 hover:text-white flex items-center justify-center border border-white/10 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            <div class="p-3">
+              <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+              <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                <span x-text="formatYear(movie.release_date)"></span>
+                <span class="text-zinc-300 flex items-center gap-0.5">
+                  <span class="text-amber-400">★</span> <span x-text="formatRating(movie.vote_average)"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW C: GENRE EXPLORER
+         ==================================================================== -->
+    <div x-show="!isSearchActive && activeTab === 'genres'" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-[70vh]">
+      <div class="mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold text-white mb-1.5">Katalog Film Menurut Kategori</h1>
+        <p class="text-xs sm:text-sm text-zinc-500">Pilih kategori untuk melihat deretan film terbaik.</p>
+      </div>
+
+      <!-- Genre Pills (Solid & Calm) -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar mb-8">
+        <template x-for="g in genresList" :key="g.id">
+          <button 
+            @click="selectGenre(g)" 
+            :class="selectedGenre.id === g.id ? 'bg-white text-zinc-950 font-semibold' : 'bg-cinema-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'"
+            class="px-4 py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-colors duration-150">
+            <span x-text="g.name"></span>
+          </button>
+        </template>
+      </div>
+
+      <!-- Genre Movies Grid Header -->
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-white">
+          <span>Film Kategori </span><span class="text-zinc-300" x-text="selectedGenre.name"></span>
+        </h2>
+      </div>
+
+      <!-- Loading State -->
+      <div x-show="isLoadingGenre" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <template x-for="i in 12" :key="i">
+          <div class="poster-container skeleton-shimmer"></div>
+        </template>
+      </div>
+
+      <!-- Grid -->
+      <div x-show="!isLoadingGenre" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <template x-for="movie in genreMovies" :key="movie.id">
+          <div 
+            @click="openModal(movie)" 
+            class="group cursor-pointer rounded-lg surface-card overflow-hidden flex flex-col justify-between">
+            <div class="poster-container relative">
+              <img 
+                :src="getImageUrl(movie.poster_path, 'w500')" 
+                :alt="movie.title" 
+                loading="lazy"
+                class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+              />
+              <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                <span class="text-amber-400">★</span>
+                <span x-text="formatRating(movie.vote_average)"></span>
+              </div>
+            </div>
+            <div class="p-3">
+              <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+              <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                <span x-text="formatYear(movie.release_date)"></span>
+                <button 
+                  @click.stop="toggleWatchlist(movie, $event)" 
+                  class="hover:text-zinc-200 transition-colors">
+                  <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓ Di Daftar</span>
+                  <span x-show="!isInWatchlist(movie.id)">+ Daftar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW E: RELEASE YEAR EXPLORER (Berdasarkan Tahun Rilis)
+         ==================================================================== -->
+    <div x-show="!isSearchActive && activeTab === 'years'" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-[70vh]">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-zinc-800">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold text-white mb-1.5">Katalog Berdasarkan Tahun Rilis</h1>
+          <p class="text-xs sm:text-sm text-zinc-500">Jelajahi karya sinematik terbaik berdasarkan tahun penayangan perdana.</p>
+        </div>
+
+        <!-- Sort Filter Controls -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-zinc-400">Urutkan:</span>
+          <button 
+            @click="setYearSort('popularity.desc')" 
+            :class="yearSortBy === 'popularity.desc' ? 'bg-white text-zinc-950 font-semibold' : 'bg-cinema-900 text-zinc-400 border border-zinc-800 hover:text-white'"
+            class="px-3 py-1.5 rounded-lg text-xs transition-colors duration-150">
+            Paling Populer
+          </button>
+          <button 
+            @click="setYearSort('vote_average.desc')" 
+            :class="yearSortBy === 'vote_average.desc' ? 'bg-white text-zinc-950 font-semibold' : 'bg-cinema-900 text-zinc-400 border border-zinc-800 hover:text-white'"
+            class="px-3 py-1.5 rounded-lg text-xs transition-colors duration-150">
+            Rating Tertinggi
+          </button>
+        </div>
+      </div>
+
+      <!-- Year Filter Control Panel (Dropdown Lengkap 1970 - 2026) -->
+      <div class="bg-cinema-900 border border-zinc-800 rounded-xl p-4 sm:p-5 mb-8">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          <!-- Dropdown Filter Utama -->
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <label for="year-select-main" class="text-xs sm:text-sm font-semibold text-zinc-300 flex items-center gap-2">
+              <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span>Pilih Tahun:</span>
+            </label>
+            <div class="relative w-full sm:w-64">
+              <select 
+                id="year-select-main"
+                :value="selectedYear" 
+                @change="selectYear(Number($event.target.value))" 
+                class="w-full appearance-none bg-cinema-950 border border-zinc-700 hover:border-zinc-500 text-white text-sm font-medium rounded-lg pl-3.5 pr-10 py-2.5 focus:outline-none focus:border-zinc-400 cursor-pointer transition-colors">
+                <template x-for="yr in availableYears" :key="yr">
+                  <option :value="yr" :selected="selectedYear === yr" x-text="yr === 2026 ? `${yr} (Tahun Ini)` : `${yr}`"></option>
+                </template>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pilihan Cepat Tahun Populer -->
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 lg:pt-0">
+            <span class="text-xs text-zinc-500 mr-1 hidden sm:inline">Pintasan:</span>
+            <template x-for="quickYr in [2026, 2025, 2024, 2023, 2022, 2020, 2015, 2010, 2000, 1990]" :key="quickYr">
+              <button 
+                @click="selectYear(quickYr)" 
+                :class="selectedYear === quickYr ? 'bg-white text-zinc-950 font-semibold' : 'bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700 hover:text-white border border-zinc-700/60'"
+                class="px-2.5 py-1.5 rounded-md text-xs whitespace-nowrap transition-colors"
+                x-text="quickYr">
+              </button>
+            </template>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Year Movies Grid Header -->
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-white">
+          <span>Film Rilis Tahun </span><span class="text-zinc-300 font-bold" x-text="selectedYear"></span>
+        </h2>
+        <span class="text-xs text-zinc-500" x-show="!isLoadingYear" x-text="`${yearMovies.length} film ditemukan`"></span>
+      </div>
+
+      <!-- Loading State -->
+      <div x-show="isLoadingYear" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <template x-for="i in 12" :key="i">
+          <div class="poster-container skeleton-shimmer"></div>
+        </template>
+      </div>
+
+      <!-- Empty State -->
+      <div x-show="!isLoadingYear && yearMovies.length === 0" class="text-center py-20 bg-cinema-900/60 border border-zinc-800 rounded-xl">
+        <p class="text-zinc-400 text-sm">Tidak ada film ditemukan untuk tahun <span x-text="selectedYear"></span>.</p>
+      </div>
+
+      <!-- Movies Grid -->
+      <div x-show="!isLoadingYear && yearMovies.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <template x-for="movie in yearMovies" :key="movie.id">
+          <div 
+            @click="openModal(movie)" 
+            class="group cursor-pointer rounded-lg surface-card overflow-hidden flex flex-col justify-between">
+            <div class="poster-container relative">
+              <img 
+                :src="getImageUrl(movie.poster_path, 'w500')" 
+                :alt="movie.title" 
+                loading="lazy"
+                class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+              />
+              <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                <span class="text-amber-400">★</span>
+                <span x-text="formatRating(movie.vote_average)"></span>
+              </div>
+            </div>
+            <div class="p-3">
+              <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+              <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                <span x-text="formatYear(movie.release_date)"></span>
+                <button 
+                  @click.stop="toggleWatchlist(movie, $event)" 
+                  class="hover:text-zinc-200 transition-colors">
+                  <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓ Di Daftar</span>
+                  <span x-show="!isInWatchlist(movie.id)">+ Daftar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW D: HOME PAGE (HERO SHOWCASE + NETFLIX-STYLE RAILS)
+         ==================================================================== -->
+    <div x-show="!isSearchActive && activeTab === 'home'">
+      
+      <!-- HERO BANNER SECTION -->
+      <section class="relative min-h-[70vh] lg:min-h-[80vh] flex items-center overflow-hidden -mt-16 sm:-mt-20 pt-16 sm:pt-20">
+        
+        <!-- Hero Dynamic Backdrop Image -->
+        <template x-if="activeHero">
+          <div class="absolute inset-0 z-0">
+            <img 
+              :src="getImageUrl(activeHero.backdrop_path, 'original', true)" 
+              :alt="activeHero.title" 
+              class="w-full h-full object-cover object-center filter brightness-[0.75] transition-all duration-700 ease-out"
+            />
+            <!-- Natural Dark Scrim Overlay (Neutral Black, Zero Gradients) -->
+            <div class="absolute inset-0 hero-scrim-vertical"></div>
+            <div class="absolute inset-0 hero-scrim-horizontal hidden md:block"></div>
+          </div>
+        </template>
+
+        <!-- Hero Content Overlay -->
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20 w-full">
+          <div class="max-w-2xl" x-show="activeHero">
+            
+            <!-- Badges Bar (Solid & Quiet) -->
+            <div class="flex flex-wrap items-center gap-2.5 mb-4">
+              <span class="bg-zinc-800 border border-zinc-700/80 text-zinc-200 text-xs font-medium px-2.5 py-1 rounded-md">
+                Peringkat #<span x-text="currentHeroIndex + 1"></span> Minggu Ini
+              </span>
+
+              <span class="bg-cinema-900/80 border border-zinc-800 text-zinc-300 text-xs px-2.5 py-1 rounded-md" x-text="formatYear(activeHero.release_date)"></span>
+
+              <span class="bg-cinema-900/80 border border-zinc-800 text-zinc-200 text-xs px-2.5 py-1 rounded-md flex items-center gap-1 font-medium">
+                <span class="text-amber-400">★</span> <span x-text="formatRating(activeHero.vote_average)"></span>
+              </span>
+
+              <span class="bg-cinema-900/80 border border-zinc-800 text-zinc-400 text-xs px-2 py-0.5 rounded">Ultra HD</span>
+            </div>
+
+            <!-- Title -->
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-4 leading-tight drop-shadow-sm" x-text="activeHero.title"></h1>
+
+            <!-- Overview -->
+            <p class="text-sm sm:text-base text-zinc-300 line-clamp-3 mb-8 leading-relaxed font-normal max-w-xl" x-text="activeHero.overview"></p>
+
+            <!-- Hero Action Buttons (Solid White & Dark Modern Minimalist) -->
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Watch Trailer Button -->
+              <button 
+                @click="openModal(activeHero, true)" 
+                class="btn-solid-white px-6 py-3 rounded-lg text-sm sm:text-base flex items-center gap-2">
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <span>Tonton Trailer</span>
+              </button>
+
+              <!-- Detail Info Button -->
+              <button 
+                @click="openModal(activeHero, false)" 
+                class="btn-solid-dark px-5 py-3 rounded-lg text-sm sm:text-base flex items-center gap-2">
+                <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Info Lengkap</span>
+              </button>
+
+              <!-- Add to Watchlist Button -->
+              <button 
+                @click="toggleWatchlist(activeHero, $event)" 
+                class="btn-solid-dark p-3 rounded-lg text-zinc-300 hover:text-white"
+                :title="isInWatchlist(activeHero.id) ? 'Hapus dari Daftar' : 'Tambah ke Daftar'">
+                <svg x-show="!isInWatchlist(activeHero.id)" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <svg x-show="isInWatchlist(activeHero.id)" class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Slide Indicator Bars (Quiet & Clean) -->
+            <div class="flex items-center gap-2 mt-8">
+              <template x-for="(hero, idx) in heroMovies" :key="hero.id">
+                <button 
+                  @click="setHeroIndex(idx)" 
+                  class="h-1 rounded-full transition-all duration-200"
+                  :class="currentHeroIndex === idx ? 'w-8 bg-white' : 'w-2.5 bg-zinc-700 hover:bg-zinc-500'">
+                </button>
+              </template>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Next / Prev Hero Controls (Desktop) -->
+        <button 
+          @click="prevHero()" 
+          class="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-cinema-900/80 border border-zinc-800 items-center justify-center text-zinc-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <button 
+          @click="nextHero()" 
+          class="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-cinema-900/80 border border-zinc-800 items-center justify-center text-zinc-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </section>
+
+      <!-- ==================================================================
+           CATEGORY SECTIONS / MOVIE RAILS (Clean & Modern)
+           ================================================================== -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-10">
+
+        <!-- RAIL 1: SEDANG TREN MINGGU INI -->
+        <section id="rail-trending" class="carousel-rail relative group/rail">
+          <div class="flex items-center justify-between mb-3.5">
+            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">
+              Sedang Tren Minggu Ini
+            </h2>
+            <button @click="switchToGenres()" class="text-xs font-medium text-zinc-400 hover:text-white flex items-center gap-1 transition-colors">
+              Lihat Semua
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          <button 
+            @click="scrollRail('rail-trending-content', -600)" 
+            class="carousel-btn absolute -left-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button 
+            @click="scrollRail('rail-trending-content', 600)" 
+            class="carousel-btn absolute -right-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <div id="rail-trending-content" class="flex gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth">
+            <template x-for="(movie, index) in rails.trending" :key="movie.id">
+              <div 
+                @click="openModal(movie)" 
+                class="flex-shrink-0 w-36 sm:w-44 md:w-52 cursor-pointer group surface-card rounded-lg overflow-hidden relative">
+                <!-- Rank Pill -->
+                <div class="absolute top-2 left-2 z-10 w-6 h-6 rounded bg-black/80 border border-white/10 flex items-center justify-center text-xs font-bold text-zinc-200" x-text="index + 1"></div>
+                
+                <div class="poster-container relative">
+                  <img :src="getImageUrl(movie.poster_path, 'w500')" :alt="movie.title" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300" />
+                  <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                    <span class="text-amber-400">★</span> <span x-text="formatRating(movie.vote_average)"></span>
+                  </div>
+                </div>
+
+                <div class="p-3">
+                  <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+                  <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                    <span x-text="formatYear(movie.release_date)"></span>
+                    <button @click.stop="toggleWatchlist(movie, $event)" class="hover:text-zinc-200 transition-colors">
+                      <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓</span>
+                      <span x-show="!isInWatchlist(movie.id)">+</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+
+        <!-- RAIL 2: PALING POPULER -->
+        <section id="rail-popular" class="carousel-rail relative group/rail">
+          <div class="flex items-center justify-between mb-3.5">
+            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">
+              Paling Populer
+            </h2>
+            <button @click="switchToGenres()" class="text-xs font-medium text-zinc-400 hover:text-white flex items-center gap-1 transition-colors">
+              Lihat Semua
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          <button @click="scrollRail('rail-popular-content', -600)" class="carousel-btn absolute -left-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button @click="scrollRail('rail-popular-content', 600)" class="carousel-btn absolute -right-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <div id="rail-popular-content" class="flex gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth">
+            <template x-for="movie in rails.popular" :key="movie.id">
+              <div @click="openModal(movie)" class="flex-shrink-0 w-36 sm:w-44 md:w-52 cursor-pointer group surface-card rounded-lg overflow-hidden relative">
+                <div class="poster-container relative">
+                  <img :src="getImageUrl(movie.poster_path, 'w500')" :alt="movie.title" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300" />
+                  <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                    <span class="text-amber-400">★</span> <span x-text="formatRating(movie.vote_average)"></span>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+                  <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                    <span x-text="formatYear(movie.release_date)"></span>
+                    <button @click.stop="toggleWatchlist(movie, $event)" class="hover:text-zinc-200 transition-colors">
+                      <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓</span>
+                      <span x-show="!isInWatchlist(movie.id)">+</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+
+        <!-- RAIL 3: RATING TERTINGGI -->
+        <section id="rail-toprated" class="carousel-rail relative group/rail">
+          <div class="flex items-center justify-between mb-3.5">
+            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">
+              Rating Tertinggi
+            </h2>
+          </div>
+
+          <button @click="scrollRail('rail-toprated-content', -600)" class="carousel-btn absolute -left-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button @click="scrollRail('rail-toprated-content', 600)" class="carousel-btn absolute -right-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <div id="rail-toprated-content" class="flex gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth">
+            <template x-for="movie in rails.topRated" :key="movie.id">
+              <div @click="openModal(movie)" class="flex-shrink-0 w-36 sm:w-44 md:w-52 cursor-pointer group surface-card rounded-lg overflow-hidden relative">
+                <div class="poster-container relative">
+                  <img :src="getImageUrl(movie.poster_path, 'w500')" :alt="movie.title" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300" />
+                  <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                    <span class="text-amber-400">★</span> <span x-text="formatRating(movie.vote_average)"></span>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+                  <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                    <span x-text="formatYear(movie.release_date)"></span>
+                    <button @click.stop="toggleWatchlist(movie, $event)" class="hover:text-zinc-200 transition-colors">
+                      <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓</span>
+                      <span x-show="!isInWatchlist(movie.id)">+</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+
+        <!-- RAIL 4: SEDANG TAYANG DI BIOSKOP -->
+        <section id="rail-nowplaying" class="carousel-rail relative group/rail">
+          <div class="flex items-center justify-between mb-3.5">
+            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">
+              Sedang Tayang di Bioskop
+            </h2>
+          </div>
+
+          <button @click="scrollRail('rail-nowplaying-content', -600)" class="carousel-btn absolute -left-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button @click="scrollRail('rail-nowplaying-content', 600)" class="carousel-btn absolute -right-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <div id="rail-nowplaying-content" class="flex gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth">
+            <template x-for="movie in rails.nowPlaying" :key="movie.id">
+              <div @click="openModal(movie)" class="flex-shrink-0 w-36 sm:w-44 md:w-52 cursor-pointer group surface-card rounded-lg overflow-hidden relative">
+                <div class="poster-container relative">
+                  <img :src="getImageUrl(movie.poster_path, 'w500')" :alt="movie.title" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300" />
+                  <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                    <span class="text-amber-400">★</span> <span x-text="formatRating(movie.vote_average)"></span>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+                  <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                    <span x-text="formatYear(movie.release_date)"></span>
+                    <button @click.stop="toggleWatchlist(movie, $event)" class="hover:text-zinc-200 transition-colors">
+                      <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓</span>
+                      <span x-show="!isInWatchlist(movie.id)">+</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+
+        <!-- RAIL 5: AKSI & PETUALANGAN -->
+        <section id="rail-action" class="carousel-rail relative group/rail">
+          <div class="flex items-center justify-between mb-3.5">
+            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">
+              Aksi & Petualangan
+            </h2>
+          </div>
+
+          <button @click="scrollRail('rail-action-content', -600)" class="carousel-btn absolute -left-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button @click="scrollRail('rail-action-content', 600)" class="carousel-btn absolute -right-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <div id="rail-action-content" class="flex gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth">
+            <template x-for="movie in rails.action" :key="movie.id">
+              <div @click="openModal(movie)" class="flex-shrink-0 w-36 sm:w-44 md:w-52 cursor-pointer group surface-card rounded-lg overflow-hidden relative">
+                <div class="poster-container relative">
+                  <img :src="getImageUrl(movie.poster_path, 'w500')" :alt="movie.title" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300" />
+                  <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                    <span class="text-amber-400">★</span> <span x-text="formatRating(movie.vote_average)"></span>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+                  <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                    <span x-text="formatYear(movie.release_date)"></span>
+                    <button @click.stop="toggleWatchlist(movie, $event)" class="hover:text-zinc-200 transition-colors">
+                      <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓</span>
+                      <span x-show="!isInWatchlist(movie.id)">+</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+
+        <!-- RAIL 6: FIKSI ILMIAH & FANTASI -->
+        <section id="rail-scifi" class="carousel-rail relative group/rail">
+          <div class="flex items-center justify-between mb-3.5">
+            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">
+              Fiksi Ilmiah & Fantasi
+            </h2>
+          </div>
+
+          <button @click="scrollRail('rail-scifi-content', -600)" class="carousel-btn absolute -left-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button @click="scrollRail('rail-scifi-content', 600)" class="carousel-btn absolute -right-4 top-[55%] -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-cinema-900/90 border border-zinc-800 hidden sm:flex items-center justify-center text-zinc-300 hover:text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <div id="rail-scifi-content" class="flex gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar scroll-smooth">
+            <template x-for="movie in rails.scifi" :key="movie.id">
+              <div @click="openModal(movie)" class="flex-shrink-0 w-36 sm:w-44 md:w-52 cursor-pointer group surface-card rounded-lg overflow-hidden relative">
+                <div class="poster-container relative">
+                  <img :src="getImageUrl(movie.poster_path, 'w500')" :alt="movie.title" loading="lazy" class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300" />
+                  <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[11px] font-medium text-zinc-200 flex items-center gap-1 border border-white/10">
+                    <span class="text-amber-400">★</span> <span x-text="formatRating(movie.vote_average)"></span>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <h4 class="text-xs sm:text-sm font-medium truncate text-zinc-200 group-hover:text-white transition-colors" x-text="movie.title"></h4>
+                  <div class="flex items-center justify-between text-[11px] text-zinc-500 mt-1">
+                    <span x-text="formatYear(movie.release_date)"></span>
+                    <button @click.stop="toggleWatchlist(movie, $event)" class="hover:text-zinc-200 transition-colors">
+                      <span x-show="isInWatchlist(movie.id)" class="text-zinc-200 font-semibold">✓</span>
+                      <span x-show="!isInWatchlist(movie.id)">+</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================
+       MOVIE DETAIL & TRAILER MODAL (Calm, Matte & Minimalist)
+       ======================================================================== -->
+  <div 
+    x-show="isModalOpen" 
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @keydown.escape.window="closeModal()" 
+    class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-3 sm:p-6"
+    style="display: none;">
+    
+    <!-- Modal Backdrop -->
+    <div 
+      @click="closeModal()" 
+      class="fixed inset-0 bg-black/80 backdrop-blur-sm"></div>
+
+    <!-- Modal Content Card -->
+    <div 
+      class="relative w-full max-w-4xl surface-modal rounded-xl overflow-hidden shadow-2xl z-10 modal-enter my-auto max-h-[92vh] flex flex-col">
+      
+      <!-- Close Button -->
+      <button 
+        @click="closeModal()" 
+        class="absolute top-4 right-4 z-30 w-8 h-8 rounded-full bg-black/70 hover:bg-zinc-800 text-zinc-300 hover:text-white flex items-center justify-center border border-white/10 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <!-- TOP MEDIA AREA: Trailer Player OR Backdrop Showcase -->
+      <div class="relative w-full aspect-video bg-black flex items-center justify-center overflow-hidden flex-shrink-0">
+        
+        <!-- Video Iframe if Playing Trailer -->
+        <template x-if="isPlayingTrailer && trailerKey">
+          <div class="w-full h-full relative">
+            <iframe 
+              :src="`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&rel=0&modestbranding=1`" 
+              class="w-full h-full border-0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen>
+            </iframe>
+            <!-- Switch back to overview button -->
+            <button 
+              @click="stopTrailer()" 
+              class="absolute bottom-3 right-3 px-3 py-1 rounded-md bg-black/80 text-xs font-medium text-white border border-white/15 hover:bg-zinc-800 flex items-center gap-1.5 transition-colors">
+              <span>✕ Tutup Trailer</span>
+            </button>
+          </div>
+        </template>
+
+        <!-- Default Backdrop with Play Trigger -->
+        <template x-if="!isPlayingTrailer || !trailerKey">
+          <div class="w-full h-full relative group">
+            <img 
+              :src="getImageUrl(selectedMovie?.backdrop_path || selectedMovie?.poster_path, 'original', true)" 
+              :alt="selectedMovie?.title" 
+              class="w-full h-full object-cover filter brightness-[0.7]"
+            />
+            <div class="absolute inset-0 bg-black/40"></div>
+            
+            <!-- Centered Play Trailer Button (Solid White) -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <button 
+                @click="playTrailerNow()" 
+                class="flex items-center gap-2.5 px-6 py-3 rounded-lg btn-solid-white text-sm sm:text-base shadow-lg">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <span>Putar Trailer Resmi</span>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- BOTTOM DETAILS AREA (Scrollable) -->
+      <div class="p-6 overflow-y-auto space-y-6">
+        
+        <!-- Header Info -->
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight" x-text="detailedMovie?.title || selectedMovie?.title"></h2>
+            <p x-show="detailedMovie?.tagline" class="text-sm italic text-zinc-400 mt-1" x-text="detailedMovie?.tagline"></p>
+            
+            <!-- Meta Specs -->
+            <div class="flex flex-wrap items-center gap-2.5 mt-3 text-xs sm:text-sm text-zinc-300">
+              <span class="bg-zinc-800 border border-zinc-700 text-zinc-200 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                <span class="text-amber-400">★</span> <span x-text="formatRating(detailedMovie?.vote_average || selectedMovie?.vote_average)"></span> / 10
+              </span>
+              <span class="text-zinc-500" x-text="`(${detailedMovie?.vote_count || selectedMovie?.vote_count || 0} ulasan)`"></span>
+              <span class="text-zinc-600">•</span>
+              <span x-text="formatYear(detailedMovie?.release_date || selectedMovie?.release_date)"></span>
+              <span class="text-zinc-600">•</span>
+              <span x-text="formatRuntime(detailedMovie?.runtime)"></span>
+              <span class="text-zinc-600">•</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700/60">HD</span>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons inside modal -->
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button 
+              @click="toggleWatchlist(detailedMovie || selectedMovie, $event)" 
+              :class="isInWatchlist(selectedMovie?.id) ? 'bg-zinc-800 text-white border-zinc-600' : 'btn-solid-dark'"
+              class="px-4 py-2 rounded-lg border text-xs sm:text-sm font-medium flex items-center gap-2 transition-colors">
+              <span x-show="isInWatchlist(selectedMovie?.id)">✓ Di Daftar Saya</span>
+              <span x-show="!isInWatchlist(selectedMovie?.id)">+ Tambah ke Daftar</span>
+            </button>
+            <button 
+              @click="shareMovie(detailedMovie || selectedMovie)" 
+              class="p-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white transition-colors"
+              title="Salin Tautan">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Genres Chips (Solid & Clean) -->
+        <div class="flex flex-wrap gap-1.5">
+          <template x-for="genre in (detailedMovie?.genres || [])" :key="genre.id">
+            <span class="px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-800/80 border border-zinc-700/80 text-zinc-300" x-text="genre.name"></span>
+          </template>
+        </div>
+
+        <!-- Synopsis / Overview -->
+        <div>
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Ringkasan Cerita</h3>
+          <p class="text-sm sm:text-base text-zinc-300 leading-relaxed" x-text="detailedMovie?.overview || selectedMovie?.overview || 'Sinopsis belum tersedia dalam bahasa ini.'"></p>
+        </div>
+
+        <!-- Top Cast Row -->
+        <div x-show="detailedMovie?.credits?.cast && detailedMovie.credits.cast.length > 0">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Pemeran Utama</h3>
+          <div class="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+            <template x-for="actor in (detailedMovie?.credits?.cast || []).slice(0, 8)" :key="actor.id">
+              <div class="flex-shrink-0 w-20 text-center">
+                <div class="w-14 h-14 mx-auto rounded-full overflow-hidden bg-zinc-800 border border-zinc-700 mb-2">
+                  <img 
+                    :src="actor.profile_path ? getImageUrl(actor.profile_path, 'w185') : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'" 
+                    :alt="actor.name" 
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+                <h5 class="text-xs font-medium text-zinc-200 truncate" x-text="actor.name"></h5>
+                <p class="text-[10px] text-zinc-500 truncate" x-text="actor.character"></p>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Similar Movies Row -->
+        <div x-show="detailedMovie?.similar?.results && detailedMovie.similar.results.length > 0">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Film Serupa</h3>
+          <div class="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+            <template x-for="sim in (detailedMovie?.similar?.results || []).slice(0, 6)" :key="sim.id">
+              <div 
+                @click="openModal(sim)" 
+                class="flex-shrink-0 w-28 cursor-pointer rounded-lg overflow-hidden surface-card">
+                <div class="aspect-[2/3] bg-zinc-900">
+                  <img :src="getImageUrl(sim.poster_path, 'w185')" :alt="sim.title" class="w-full h-full object-cover hover:scale-102 transition-transform" />
+                </div>
+                <p class="p-1.5 text-[11px] font-medium text-zinc-300 truncate" x-text="sim.title"></p>
+              </div>
+            </template>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       FLOATING TOAST NOTIFICATION (Solid Minimalist)
+       ======================================================================== -->
+  <div 
+    x-show="toast.show" 
+    x-transition:enter="transition ease-out duration-200 transform"
+    x-transition:enter-start="opacity-0 translate-y-2"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-150 transform"
+    x-transition:leave-start="opacity-100 translate-y-0"
+    x-transition:leave-end="opacity-0 translate-y-2"
+    class="fixed bottom-6 right-6 z-50 bg-zinc-900 border border-zinc-700/80 rounded-lg px-4 py-3 shadow-xl flex items-center gap-2.5 text-sm text-zinc-200"
+    style="display: none;">
+    <div class="w-5 h-5 rounded-full bg-zinc-800 text-zinc-200 flex items-center justify-center text-xs font-bold border border-zinc-700">
+      ✓
+    </div>
+    <span x-text="toast.message" class="font-normal"></span>
+  </div>
+
+  <!-- ========================================================================
+       FOOTER (Minimalist & Clean)
+       ======================================================================== -->
+  <footer class="border-t border-zinc-800/80 bg-cinema-950 mt-20 pt-12 pb-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        
+        <!-- Brand Info -->
+        <div class="space-y-3 md:col-span-1">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white">
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 2v2h2V6H4zm4 0v2h2V6H8zm4 0v2h2V6h-2zm4 0v2h2V6h-2zm4 0v2h2V6h-2zM4 16v2h2v-2H4zm4 0v2h2v-2H8zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2zM4 10h16v4H4v-4z"/></svg>
+            </div>
+            <span class="text-base font-bold text-white tracking-tight">CINEVERSE</span>
+          </div>
+          <p class="text-xs text-zinc-500 leading-relaxed">
+            Platform katalog dan penemuan sinema global dengan antarmuka yang tenang, bersih, dan modern.
+          </p>
+        </div>
+
+        <!-- Quick Links -->
+        <div>
+          <h4 class="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-3">Navigasi</h4>
+          <ul class="space-y-2 text-xs text-zinc-400">
+            <li><a href="#" @click.prevent="activeTab = 'home'; window.scrollTo({top: 0, behavior: 'smooth'})" class="hover:text-white transition-colors">Beranda</a></li>
+            <li><a href="#" @click.prevent="switchToGenres()" class="hover:text-white transition-colors">Katalog Kategori</a></li>
+            <li><a href="#" @click.prevent="switchToYears()" class="hover:text-white transition-colors">Katalog Tahun Rilis</a></li>
+            <li><a href="#" @click.prevent="activeTab = 'watchlist'" class="hover:text-white transition-colors">Daftar Saya</a></li>
+          </ul>
+        </div>
+
+        <!-- TMDB Attribution -->
+        <div class="md:col-span-2">
+          <h4 class="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-3">Atribusi Data</h4>
+          <div class="flex items-start gap-3 bg-zinc-900/60 p-3.5 rounded-lg border border-zinc-800">
+            <div class="w-8 h-8 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-300 flex-shrink-0 font-bold text-[11px]">
+              TMDB
+            </div>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Data film, ulasan, trailer resmi, dan poster disediakan oleh API The Movie Database (TMDB). Produk ini tidak terafiliasi atau disertifikasi secara resmi oleh TMDB.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Copyright -->
+      <div class="pt-8 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 gap-3">
+        <p>&copy; 2026 Cineverse. Desain modern & minimalis tanpa gradien.</p>
+        <span class="text-zinc-500">TMDB API Connected</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
